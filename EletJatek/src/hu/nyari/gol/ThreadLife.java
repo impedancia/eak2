@@ -81,12 +81,21 @@ public class ThreadLife extends Life {
 
         //executorService = Executors.newCachedThreadPool();//(degree_of_parallelism);
         executorService = Executors.newFixedThreadPool(degree_of_parallelism);
-        final CyclicBarrier barrier = new CyclicBarrier(degree_of_parallelism);
+        //final CyclicBarrier barrier = new CyclicBarrier(degree_of_parallelism);
         while( count > 0 ){
             long startTime = System.currentTimeMillis();
-            //CountDownLatch latch = new CountDownLatch(degree_of_parallelism);
-            barrier.reset();
+            CountDownLatch latch = new CountDownLatch(degree_of_parallelism);
+          //  barrier.reset();
             iteration_number.set(max - count);
+            //át kellene írni olyanra, hogy induljuon degree_of_parallelism db szál, ami mindegyike "végtelen ciklus"
+            //és valami konkurrens sorból vennék ki a feldolgozandó range-eket, amit előre odatenne még a szekvenciális program
+
+            //sőt mit több olyan tökélyre is el lehetne vinni valószínűleg, hogy minden számításhoz letárolnám a generáció sorszámát is
+            //és valahogy azt is fel lehetne használni --- persze ezt csak akkor, ha az utolsó állapot elérése a cél, ha animálni kell, akkor nem jó
+            //de ehhez már azt is figyelni kellene, hogy az adott generációban már kiszámítódtak-e a szomszédok
+            //meg ki tudja még mi kell hozzá --- mondjuk memória is, mert hogyha több generáció "félkész" mátrixait tárolgatni kell, az nagyobb memória igényű
+            //ááá nem éri meg
+            //de lehet csak megszaladt az agyam itt éjjel háromnegyed egykor
             for(int i=0; i<ranges.size();i++) {
                 final int param = i;
                 Runnable range_calculation =
@@ -102,14 +111,14 @@ public class ThreadLife extends Life {
                                 t = range[1];
 //                                System.out.println("Thread range: " +f+"-"+t);
                                 range_step(f, t);
-              //                  latch.countDown();
-                                try {
+                                latch.countDown();
+                                /*try {
                                     barrier.await();
                                 } catch (InterruptedException e) {
                                     e.printStackTrace();
                                 } catch (BrokenBarrierException e) {
                                     e.printStackTrace();
-                                }
+                                }*/
                                 //                               System.out.println("Thread: " +param+"finished");
                                 //long endTime = System.currentTimeMillis();
                                 //System.out.println("Thread time : " + (endTime-startTime) );
@@ -122,20 +131,20 @@ public class ThreadLife extends Life {
                 long endTime = System.currentTimeMillis();
                 //System.out.println("Starting threads time : " + (endTime-startTime) );
             }
-            try {
+            /*try {
                 barrier.await();
             } catch (InterruptedException e) {
                 e.printStackTrace();
             } catch (BrokenBarrierException e) {
                 e.printStackTrace();
-            }
-            /*try {
+            }*/
+            try {
                 latch.await();
 
  //               System.out.println("After await");
             } catch (InterruptedException e) {
                 e.printStackTrace();
-            }*/
+            }
             boolean[][] tmp = from; from = to; to = tmp;  // swap from and to
             --count;
         }
