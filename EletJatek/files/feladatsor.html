@@ -1,0 +1,59 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta http-equiv="Content-Style-Type" content="text/css">
+  <meta name="generator" content="pandoc">
+  <title></title>
+</head>
+<body>
+<h2 id="programozási-feladat-életjáték">Programozási feladat: Életjáték</h2>
+<p>Valósítsd meg az életjátékot párhuzamos Java programmal a megadott szekvenciális megoldás (<code>http://kto.web.elte.hu/Life.java</code>)
+ felhasználásával. A megadott kódon minimális változtatást hajts végre, a
+ párhuzamos megoldást egy új osztályba érdemes teeni (mely örökölhet a 
+szekvenciális megoldásból).</p>
+<p>A megoldást emailben küldd el a <code>kto@elte.hu</code> címre, a tárgy legyen "EAK2". A levélhez csatolj egy <code>neptunkód.zip</code> fájlt, melyben egy <code>neptunkód</code> könyvtár van, benne a forrásfájlok. A típusdefiníciók ennek megfelelően a <code>neptunkód</code> csomagban legyenek.</p>
+<h3 id="az-életjáték-szabályai-a-következők.">Az életjáték szabályai a következők.</h3>
+<p>Adott egy négyzetrács, amelyben minden mezőnek (a rácsháló széleit 
+leszámítva) 8 szomszédja van. A rács mezőiben sejtek élhetnek, minden 
+mezőben legfeljebb egy. A játék körökre osztott, minden körben 
+születhetnek új sejtek, és elpusztulhatnak meglévők.</p>
+<ul>
+<li>Ha egy sejtnek két vagy három szomszédja van, akkor életben marad.</li>
+<li>Ha kettőnél kevesebb vagy háromnál több szomszédja van, elpusztul.</li>
+<li>Ha egy mezőben nem volt sejt, de pontosan három szomszédjában igen, akkor ott új sejt születik.</li>
+</ul>
+<p>Fontos, hogy a változások csak a kör végén következnek be, tehát az 
+elhalálozók nem akadályozzák a születést és a túlélést (legalábbis az 
+adott körben), és a születések nem mentik meg az elhalálozókat.</p>
+<p>Adható egy alternatív megfogalmazása is a szabályoknak. Tekintsünk 
+egy 3x3-as blokkot. Tegyük fel, hogy ebben a 9 mezőben n sejt él. Ha 
+n=3, akkor a blokk közepén lévő mező a következő körben élő sejtet 
+tartalmaz majd; ha n=4, akkor a szóban forgó mező tartalma a következő 
+körben ugyanaz marad, mint ami jelenleg; minden más esetben a mező a 
+következő körben nem tartalmaz élő sejtet.</p>
+<p>A négyzetrács szélén kétféle stratégiát is választhatunk. 
+Feltehetjük, hogy a négyzetrácson kívül minden sejt permanensen halott, 
+illetve elképzelhetünk egy tórusz-világot. A tóruszon egy 5x5-ös rácsot 
+feltételezve, és a mezőket (0,0)-tól (4,4)-ig jellemezve a (0,1) mező 
+szomszédai ezek lesznek: (4,0) (4,1) (4,2) (0,0) (0,2) (1,0) (1,1) 
+(1,2).</p>
+<p>Valósítsuk meg az életjátékot nagyon nagy négyzetrácson többszálú 
+Java programmal. A program parancssorban kapjon két egész számot (a 
+játéktér méretét), egy újabb egész számot (az elvégzendő iterációk 
+számát), két fájlnevet és végül egy újabb egész számot (hány szálon 
+fusson). Az első fájlnév az input fájl, a második az output fájl neve 
+legyen.</p>
+<p>Példafájlok: <code>http://kto.web.elte.hu/</code> címen <code>acorn.dat</code>, <code>inf10.dat</code>, <code>gosperglidergun.dat</code> és <code>gliderproducingswitchengine.dat</code> néven.</p>
+<h3 id="nehezítés">Nehezítés</h3>
+<p>A program legyen interaktív. Ha a szabványos bemenetére beírjuk, hogy
+ STOP, függesztődjön fel. Ha ekkor beírjuk, hogy START, folytassa tovább
+ a számolást. Ha beírjuk, hogy HALT, a program írja ki a végeredményt az
+ output fájlba, és fejeződjön be. A megoldás során gondoskodjunk arról, 
+hogy a program jól szinkronizált legyen.</p>
+<h3 id="másik-nehezítés">Másik nehezítés</h3>
+<p>A program másodpercenként írja ki, hogy hányadik iterációnál tart. A 
+megoldás során gondoskodjunk arról, hogy a program jól szinkronizált 
+legyen.</p>
+
+
+</body></html>
