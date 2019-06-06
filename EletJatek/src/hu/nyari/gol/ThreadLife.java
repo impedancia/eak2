@@ -21,7 +21,7 @@ public class ThreadLife extends Life {
             int iterations = Integer.parseInt(args[2]);
             int degree_of_parallelism = Integer.parseInt(args[5]);
             Life life = new Life(n,m,false);
-            life.fromFile(args[3]);
+            life.fromFile(args[3]);//.animate(iterations,1,100,0,0,n,m);
             System.out.println("Computation lasted "+ life.measure(iterations) +" milliseconds.");
             life.toFile(args[4]);
         }
