@@ -5,10 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
@@ -24,6 +21,7 @@ public class ThreadLife extends Life {
     final private static AtomicInteger iteration_number = new AtomicInteger();
     private static Timer timer = new Timer();
     private List<Integer[]> ranges;
+    private ExecutorService executorService;
 
     public ThreadLife(int n, int m, boolean torus) {
         super(n, m, torus);
@@ -68,6 +66,7 @@ public class ThreadLife extends Life {
             ranges.add(range);
         }
     }
+
     public void iterate( int count ){
         calculate_ranges();
         int max = count;
@@ -80,43 +79,69 @@ public class ThreadLife extends Life {
             }
         },1000,1000);
 
-        ExecutorService executor = Executors.newFixedThreadPool(degree_of_parallelism);
-
+        //executorService = Executors.newCachedThreadPool();//(degree_of_parallelism);
+        executorService = Executors.newFixedThreadPool(degree_of_parallelism);
+        final CyclicBarrier barrier = new CyclicBarrier(degree_of_parallelism);
         while( count > 0 ){
-            CountDownLatch latch = new CountDownLatch(degree_of_parallelism);
+            long startTime = System.currentTimeMillis();
+            //CountDownLatch latch = new CountDownLatch(degree_of_parallelism);
+            barrier.reset();
             iteration_number.set(max - count);
             for(int i=0; i<ranges.size();i++) {
                 final int param = i;
                 Runnable range_calculation =
                         new Runnable(){
                             public void run(){
+                                //long startTime = System.currentTimeMillis();
+
 //                                System.out.println("Thread: " +param);
                                 int f =0;
                                 int t =0;
                                 Integer[] range = ranges.get(param);
                                 f = range[0];
                                 t = range[1];
+//                                System.out.println("Thread range: " +f+"-"+t);
                                 range_step(f, t);
-                                latch.countDown();
- //                               System.out.println("Thread: " +param+"finished");
+              //                  latch.countDown();
+                                try {
+                                    barrier.await();
+                                } catch (InterruptedException e) {
+                                    e.printStackTrace();
+                                } catch (BrokenBarrierException e) {
+                                    e.printStackTrace();
+                                }
+                                //                               System.out.println("Thread: " +param+"finished");
+                                //long endTime = System.currentTimeMillis();
+                                //System.out.println("Thread time : " + (endTime-startTime) );
+//
                             }
                         };
                 //range_calculation.run();
-                executor.submit(range_calculation);
+                executorService.submit(range_calculation);
 
-
+                long endTime = System.currentTimeMillis();
+                //System.out.println("Starting threads time : " + (endTime-startTime) );
             }
             try {
+                barrier.await();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } catch (BrokenBarrierException e) {
+                e.printStackTrace();
+            }
+            /*try {
                 latch.await();
+
  //               System.out.println("After await");
             } catch (InterruptedException e) {
                 e.printStackTrace();
-            }
+            }*/
             boolean[][] tmp = from; from = to; to = tmp;  // swap from and to
             --count;
         }
         timer.cancel();
         timer.purge();
+        executorService.shutdown();
     }
 
     public static void main(String[] args ) throws Exception {
@@ -127,6 +152,8 @@ public class ThreadLife extends Life {
             new Life(500,500,false).gosperGliderGun(5,5).animate(200,1,100,0,0,50,80);
             new Life(300,300,false).acorn(150,150).animate(6000,100,0,140,100,20,70);
         } else {
+            //ez azért van, hogy legyen időm rácsatlakoztatni a profilert
+            //Thread.sleep(20000);
             n = Integer.parseInt(args[0]);
             m = Integer.parseInt(args[1]);
             iterations = Integer.parseInt(args[2]);
