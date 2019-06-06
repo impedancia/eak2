@@ -179,7 +179,7 @@ public class Life {
     // main
     ///////
 
-    public  static void safdfdsfdsa( String[] args ) throws Exception {
+    public  static void main( String[] args ) throws Exception {
         if( args.length < 5 ){
             new Life(20,50,false).blinker(0,0).animate(100,1,100,0,0,20,50);
             new Life(50,50,false).acorn(25,25).animate(200,1,100,0,0,50,50);

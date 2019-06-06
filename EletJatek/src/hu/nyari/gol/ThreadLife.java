@@ -1,7 +1,16 @@
 package hu.nyari.gol;
 
+import java.security.InvalidParameterException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 
 /** Game of Life. */
 public class ThreadLife extends Life {
@@ -12,6 +21,8 @@ public class ThreadLife extends Life {
     private static int iterations;
     private static int range_length;
     private static int range_mod;
+    final private static AtomicInteger iteration_number = new AtomicInteger();
+    private static Timer timer = new Timer();
     private List<Integer[]> ranges;
 
     public ThreadLife(int n, int m, boolean torus) {
@@ -59,21 +70,53 @@ public class ThreadLife extends Life {
     }
     public void iterate( int count ){
         calculate_ranges();
+        int max = count;
+        timer.schedule(new TimerTask() {
+
+            @Override
+            public void run() {
+                int it = iteration_number.get();
+                System.out.println("iteration count: " + it);
+            }
+        },1000,1000);
+
+        ExecutorService executor = Executors.newFixedThreadPool(degree_of_parallelism);
 
         while( count > 0 ){
-            int f =0;
-            int t =0;
+            CountDownLatch latch = new CountDownLatch(degree_of_parallelism);
+            iteration_number.set(max - count);
             for(int i=0; i<ranges.size();i++) {
-                Integer[] range = ranges.get(i);
-                f = range[0];
-                t = range[1];
-                System.out.println("f: "+f+"t: "+t);
-                range_step(f, t);
-            }
+                final int param = i;
+                Runnable range_calculation =
+                        new Runnable(){
+                            public void run(){
+//                                System.out.println("Thread: " +param);
+                                int f =0;
+                                int t =0;
+                                Integer[] range = ranges.get(param);
+                                f = range[0];
+                                t = range[1];
+                                range_step(f, t);
+                                latch.countDown();
+ //                               System.out.println("Thread: " +param+"finished");
+                            }
+                        };
+                //range_calculation.run();
+                executor.submit(range_calculation);
 
+
+            }
+            try {
+                latch.await();
+ //               System.out.println("After await");
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
             boolean[][] tmp = from; from = to; to = tmp;  // swap from and to
             --count;
         }
+        timer.cancel();
+        timer.purge();
     }
 
     public static void main(String[] args ) throws Exception {
@@ -88,6 +131,7 @@ public class ThreadLife extends Life {
             m = Integer.parseInt(args[1]);
             iterations = Integer.parseInt(args[2]);
             degree_of_parallelism = Integer.parseInt(args[5]);
+            if (degree_of_parallelism > n*m) throw new InvalidParameterException("Több a szál, mint a feldolgozandó elem.");
             ThreadLife life = new ThreadLife(n, m,false);
             life.fromFile(args[3]);//.animate(iterations,1,100,0,0,n,m);
             System.out.println("Computation lasted "+ life.measure(iterations) +" milliseconds.");
