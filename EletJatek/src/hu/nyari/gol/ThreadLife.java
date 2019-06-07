@@ -1,11 +1,9 @@
 package hu.nyari.gol;
 
 import java.security.InvalidParameterException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
@@ -18,10 +16,16 @@ public class ThreadLife extends Life {
     private static int iterations;
     private static int range_length;
     private static int range_mod;
+    private static int range_count;
     final private static AtomicInteger iteration_number = new AtomicInteger();
     private static Timer timer = new Timer();
     private List<Integer[]> ranges;
     private ExecutorService executorService;
+    private ConcurrentLinkedQueue<Integer[]> rangesQueue;
+    private CountDownLatch latch;
+    private List<CancellableRunnable> runnables = new ArrayList<>(degree_of_parallelism);
+    private Map<CancellableRunnable, Future<?>> tasks = new HashMap<>();
+    private CyclicBarrier barrier;
 
     public ThreadLife(int n, int m, boolean torus) {
         super(n, m, torus);
@@ -31,29 +35,49 @@ public class ThreadLife extends Life {
 
     /** Compute new state for only one cell */
     protected void one_step(int i, int j){
-               // System.out.println(("i: "+i+"j: "+j));
-                switch( living9(i,j) ){
-                    case  3: to[i][j] = true; break;
-                    case  4: to[i][j] = from[i][j]; break;
-                    default: to[i][j] = false;
-                }
+        switch( living9(i,j) ){
+            case  3: to[i][j] = true; break;
+            case  4: to[i][j] = from[i][j]; break;
+            default: to[i][j] = false;
+        }
     }
 
-    protected void range_step(int f, int t){
+   /* protected void range_step(int f, int t){
         for(int k = f; k<=t; k++)
         {
             int i = k / m;
             int j = k % m;
             one_step(i,j);
         }
-    }
-    private void calculate_ranges(){
+    }*/
+   protected void range_step(int f, int k){
+       int ii = k / m;
+       for( int i=ii; i<ii+1; ++i ){
+           for( int j=0; j<to[0].length; ++j ){
+               switch( living9(i,j) ){
+                   case  3: to[i][j] = true; break;
+                   case  4: to[i][j] = from[i][j]; break;
+                   default: to[i][j] = false;
+               }
+           }
+       }
+   }
+    private void calculate_ranges(int len){
         int number_of_cells = n*m;
-        range_length = number_of_cells / degree_of_parallelism;
-        range_mod = number_of_cells % degree_of_parallelism;
+        if (len == 0) {
+            range_length = number_of_cells / degree_of_parallelism;
+            range_count = number_of_cells / range_length;
+            range_mod = number_of_cells % range_length;
+        }
+        else {
+            range_length = len;
+            range_mod = number_of_cells % len;
+            range_count = number_of_cells / len;
+
+        }
 
         ranges = new ArrayList<Integer[]>();
-        for(int i=0; i<degree_of_parallelism;i++) {
+        for(int i=0; i<range_count;i++) {
             Integer[] range =new Integer[2];
             range[0] = i * range_length;
             range[1] = (i+1) * range_length-1;
@@ -61,14 +85,15 @@ public class ThreadLife extends Life {
         }
         if (range_mod > 0) {
             Integer[] range = new Integer[2];
-            range[0] = number_of_cells - 1 - range_mod;
+            range[0] = number_of_cells - range_mod;
             range[1] = number_of_cells - 1;
             ranges.add(range);
+            range_count++;
         }
     }
 
     public void iterate( int count ){
-        calculate_ranges();
+        calculate_ranges(m);
         int max = count;
         timer.schedule(new TimerTask() {
 
@@ -76,78 +101,83 @@ public class ThreadLife extends Life {
             public void run() {
                 int it = iteration_number.get();
                 System.out.println("iteration count: " + it);
+//                System.out.println("latch: "+latch.getCount());
             }
         },1000,1000);
 
-        //executorService = Executors.newCachedThreadPool();//(degree_of_parallelism);
         executorService = Executors.newFixedThreadPool(degree_of_parallelism);
-        //final CyclicBarrier barrier = new CyclicBarrier(degree_of_parallelism);
-        while( count > 0 ){
-            long startTime = System.currentTimeMillis();
-            CountDownLatch latch = new CountDownLatch(degree_of_parallelism);
-          //  barrier.reset();
-            iteration_number.set(max - count);
-            //át kellene írni olyanra, hogy induljuon degree_of_parallelism db szál, ami mindegyike "végtelen ciklus"
-            //és valami konkurrens sorból vennék ki a feldolgozandó range-eket, amit előre odatenne még a szekvenciális program
+       // barrier = new CyclicBarrier(degree_of_parallelism);
 
-            //sőt mit több olyan tökélyre is el lehetne vinni valószínűleg, hogy minden számításhoz letárolnám a generáció sorszámát is
-            //és valahogy azt is fel lehetne használni --- persze ezt csak akkor, ha az utolsó állapot elérése a cél, ha animálni kell, akkor nem jó
-            //de ehhez már azt is figyelni kellene, hogy az adott generációban már kiszámítódtak-e a szomszédok
-            //meg ki tudja még mi kell hozzá --- mondjuk memória is, mert hogyha több generáció "félkész" mátrixait tárolgatni kell, az nagyobb memória igényű
-            //ááá nem éri meg
-            //de lehet csak megszaladt az agyam itt éjjel háromnegyed egykor
-            for(int i=0; i<ranges.size();i++) {
-                final int param = i;
-                Runnable range_calculation =
-                        new Runnable(){
-                            public void run(){
-                                //long startTime = System.currentTimeMillis();
+        rangesQueue = new ConcurrentLinkedQueue<Integer[]>();
+        for(int i = 0; i<= count; i++){
+            rangesQueue.addAll(ranges);
+        }
+     //   rangesQueue.element();
+        for(int i = 0; i<= degree_of_parallelism; i++) {
+            CancellableRunnable range_calculation_infinite =
+                    new CancellableRunnable() {
+                        private volatile boolean running = true;
+                        public void cancel() {
+                            running = false;
+                        }
 
-//                                System.out.println("Thread: " +param);
-                                int f =0;
-                                int t =0;
-                                Integer[] range = ranges.get(param);
+                        public void run() {
+                            int f = 0;
+                            int t = 0;
+
+                            while (running) {
+                                Integer[] range = rangesQueue.poll();
                                 f = range[0];
                                 t = range[1];
-//                                System.out.println("Thread range: " +f+"-"+t);
                                 range_step(f, t);
                                 latch.countDown();
-                                /*try {
-                                    barrier.await();
-                                } catch (InterruptedException e) {
-                                    e.printStackTrace();
-                                } catch (BrokenBarrierException e) {
-                                    e.printStackTrace();
-                                }*/
-                                //                               System.out.println("Thread: " +param+"finished");
-                                //long endTime = System.currentTimeMillis();
-                                //System.out.println("Thread time : " + (endTime-startTime) );
-//
+//                                System.out.println("latch: "+latch.getCount());
+//                                barrier.
                             }
-                        };
-                //range_calculation.run();
-                executorService.submit(range_calculation);
+                        }
+                    };
+            //range_calculation.run();
+            runnables.add(range_calculation_infinite);
+            //Future<?> future = executorService.submit(range_calculation_infinite);
+            //tasks.put(range_calculation_infinite,future);
+        }
 
-                long endTime = System.currentTimeMillis();
-                //System.out.println("Starting threads time : " + (endTime-startTime) );
+        //final CyclicBarrier barrier = new CyclicBarrier(degree_of_parallelism);
+        while( count > 0 ) {
+            long startTime = System.currentTimeMillis();
+            for (Integer[] range :ranges) {
+                int f = 0;
+                int t = 0;
+                f = range[0];
+                t = range[1];
+                range_step(f, t);
             }
-            /*try {
-                barrier.await();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            } catch (BrokenBarrierException e) {
-                e.printStackTrace();
-            }*/
-            try {
+
+         //   latch = new CountDownLatch(range_count);
+
+            iteration_number.set(max - count);
+
+
+          /*  try {
                 latch.await();
 
- //               System.out.println("After await");
+                //               System.out.println("After await");
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-            boolean[][] tmp = from; from = to; to = tmp;  // swap from and to
+*/
+            boolean[][] tmp = from;
+            from = to;
+            to = tmp;  // swap from and to
             --count;
+
         }
+        //  running.set(false);
+/*        for(CancellableRunnable r : runnables){
+            r.cancel();
+            Future<?> f = tasks.get(r);
+            f.cancel(true);
+        }*/
         timer.cancel();
         timer.purge();
         executorService.shutdown();
@@ -162,7 +192,7 @@ public class ThreadLife extends Life {
             new Life(300,300,false).acorn(150,150).animate(6000,100,0,140,100,20,70);
         } else {
             //ez azért van, hogy legyen időm rácsatlakoztatni a profilert
-            //Thread.sleep(20000);
+    //        Thread.sleep(10000);
             n = Integer.parseInt(args[0]);
             m = Integer.parseInt(args[1]);
             iterations = Integer.parseInt(args[2]);
