@@ -1,5 +1,7 @@
 package hu.nyari.gol;
 
+import net.jcip.annotations.GuardedBy;
+
 import java.security.InvalidParameterException;
 import java.util.ArrayList;
 import java.util.List;
@@ -22,6 +24,7 @@ public class ThreadLife extends Life {
     private static Timer timer = new Timer();
     private List<Integer[]> ranges;
     private ExecutorService executorService;
+    private CountDownLatch startLatch;
 
     public ThreadLife(int n, int m, boolean torus) {
         super(n, m, torus);
@@ -78,7 +81,10 @@ public class ThreadLife extends Life {
                 System.out.println("iteration count: " + it);
             }
         },1000,1000);
-
+        startLatch = new CountDownLatch(0);
+        ReadInput input = new ReadInput(new CountDownLatch[]{startLatch});
+        Thread console = new Thread(input);
+        console.start();
         //executorService = Executors.newCachedThreadPool();//(degree_of_parallelism);
         executorService = Executors.newFixedThreadPool(degree_of_parallelism);
         //final CyclicBarrier barrier = new CyclicBarrier(degree_of_parallelism);
@@ -87,22 +93,17 @@ public class ThreadLife extends Life {
             CountDownLatch latch = new CountDownLatch(degree_of_parallelism);
           //  barrier.reset();
             iteration_number.set(max - count);
-            //át kellene írni olyanra, hogy induljuon degree_of_parallelism db szál, ami mindegyike "végtelen ciklus"
-            //és valami konkurrens sorból vennék ki a feldolgozandó range-eket, amit előre odatenne még a szekvenciális program
-
-            //sőt mit több olyan tökélyre is el lehetne vinni valószínűleg, hogy minden számításhoz letárolnám a generáció sorszámát is
-            //és valahogy azt is fel lehetne használni --- persze ezt csak akkor, ha az utolsó állapot elérése a cél, ha animálni kell, akkor nem jó
-            //de ehhez már azt is figyelni kellene, hogy az adott generációban már kiszámítódtak-e a szomszédok
-            //meg ki tudja még mi kell hozzá --- mondjuk memória is, mert hogyha több generáció "félkész" mátrixait tárolgatni kell, az nagyobb memória igényű
-            //ááá nem éri meg
-            //de lehet csak megszaladt az agyam itt éjjel háromnegyed egykor
             for(int i=0; i<ranges.size();i++) {
                 final int param = i;
                 Runnable range_calculation =
                         new Runnable(){
                             public void run(){
                                 //long startTime = System.currentTimeMillis();
-
+                                try {
+                                    startLatch.await();
+                                } catch (InterruptedException e) {
+                                    e.printStackTrace();
+                                }
 //                                System.out.println("Thread: " +param);
                                 int f =0;
                                 int t =0;
@@ -151,6 +152,7 @@ public class ThreadLife extends Life {
         timer.cancel();
         timer.purge();
         executorService.shutdown();
+        input.kill();
     }
 
     public static void main(String[] args ) throws Exception {
@@ -161,8 +163,9 @@ public class ThreadLife extends Life {
             new Life(500,500,false).gosperGliderGun(5,5).animate(200,1,100,0,0,50,80);
             new Life(300,300,false).acorn(150,150).animate(6000,100,0,140,100,20,70);
         } else {
+
             //ez azért van, hogy legyen időm rácsatlakoztatni a profilert
-            //Thread.sleep(20000);
+   //         Thread.sleep(10000);
             n = Integer.parseInt(args[0]);
             m = Integer.parseInt(args[1]);
             iterations = Integer.parseInt(args[2]);
