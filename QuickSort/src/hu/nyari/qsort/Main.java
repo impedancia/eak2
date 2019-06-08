@@ -18,8 +18,8 @@ public class Main {
         String infile = args[0];
         String outfile = args[1];
         //int degree_of_par = args[2];
-     //   long[] array = processFile(infile);
-     //   qsort_seq(infile, outfile, array);
+        long[] array = processFile(infile);
+        qsort_seq(infile, outfile, array);
         //qsort_parallel_net(infile,outfile,array);
         long[] array2 = processFile(infile);
         qsort_parallel(infile,outfile,array2);
@@ -53,7 +53,7 @@ public class Main {
 
 
         QuickSortParallel qs = new QuickSortParallel();
-        qs.sort(array);
+        qs.sort_par(array);
 
         long endTime = System.currentTimeMillis();
         System.out.println("par sorting time: "+ (endTime-startTime)+" ms");
