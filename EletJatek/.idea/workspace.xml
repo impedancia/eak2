@@ -2,12 +2,10 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="9ba6fbac-f020-4871-98be-ffe2947a0ea8" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/../QuickSort/.idea/encodings.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../QuickSort/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../QuickSort/src/hu/nyari/netrol/QuickSorter.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../QuickSort/src/hu/nyari/qsort/QuickSortParallel.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../QuickSort/src/hu/nyari/qsort/QuickSortTask.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../QuickSort/src/hu/nyari/qsort/ThreadWaiter.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../QuickSort/src/hu/nyari/qsort/Main.java" beforeDir="false" afterPath="$PROJECT_DIR$/../QuickSort/src/hu/nyari/qsort/Main.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../QuickSort/src/hu/nyari/qsort/QuickSortParallel.java" beforeDir="false" afterPath="$PROJECT_DIR$/../QuickSort/src/hu/nyari/qsort/QuickSortParallel.java" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />

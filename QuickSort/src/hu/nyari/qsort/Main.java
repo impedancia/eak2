@@ -12,15 +12,17 @@ public class Main {
     public static void main(String[] args) throws Exception {
         //test_parallelism();
        // generate();
+       // Thread.sleep(10000);
         if (args.length < 2) throw new Exception();
 
         String infile = args[0];
         String outfile = args[1];
         //int degree_of_par = args[2];
-        long[] array = processFile(infile);
-        qsort_seq(infile, outfile, array);
+     //   long[] array = processFile(infile);
+     //   qsort_seq(infile, outfile, array);
         //qsort_parallel_net(infile,outfile,array);
-        qsort_parallel(infile,outfile,array);
+        long[] array2 = processFile(infile);
+        qsort_parallel(infile,outfile,array2);
     }
 
     private static void qsort_seq(String infile, String outfile, long[] array) throws IOException {
@@ -51,7 +53,7 @@ public class Main {
 
 
         QuickSortParallel qs = new QuickSortParallel();
-        qs.sort(array,0,array.length-1);
+        qs.sort(array);
 
         long endTime = System.currentTimeMillis();
         System.out.println("par sorting time: "+ (endTime-startTime)+" ms");
