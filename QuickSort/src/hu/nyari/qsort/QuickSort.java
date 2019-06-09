@@ -9,6 +9,12 @@ public class QuickSort {
 
     protected void sort( long[] arr, int lo, int hi ){
         assert arr != null && 0 <= lo && hi < arr.length && -1 <= hi - lo;
+        /*System.out.print("array:");
+        for(long l : arr)
+        {
+            System.out.print(" "+l);
+        }
+        System.out.println(); */
         if( lo < hi ){  // there are at least two elements to sort
             final int pivot = split( arr, lo, hi );
             assert lo <= pivot && pivot <= hi;

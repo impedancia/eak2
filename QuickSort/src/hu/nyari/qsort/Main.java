@@ -24,7 +24,17 @@ public class Main {
         long[] array2 = processFile(infile);
         qsort_parallel(infile,outfile,array2);
     }
+    private static void qsort_parallel(String infile, String outfile, long[] array) throws Exception {
+        long startTime = System.currentTimeMillis();
 
+
+        QuickSortParallel qs = new QuickSortParallel(6);
+        qs.sort_par(array);
+
+        long endTime = System.currentTimeMillis();
+        System.out.println("par sorting time: "+ (endTime-startTime)+" ms");
+        writeFile(outfile+"out_par"+array.length+".txt", array);
+    }
     private static void qsort_seq(String infile, String outfile, long[] array) throws IOException {
         long startTime = System.currentTimeMillis();
 
@@ -48,17 +58,7 @@ public class Main {
         System.out.println("par sorting time: "+ (endTime-startTime)+" ms");
         writeFile(outfile+"out_net"+array.length+".txt", array);
     }
-    private static void qsort_parallel(String infile, String outfile, long[] array) throws IOException {
-        long startTime = System.currentTimeMillis();
 
-
-        QuickSortParallel qs = new QuickSortParallel();
-        qs.sort_par(array);
-
-        long endTime = System.currentTimeMillis();
-        System.out.println("par sorting time: "+ (endTime-startTime)+" ms");
-        writeFile(outfile+"out_par"+array.length+".txt", array);
-    }
     private static long[] processFile(String path) throws IOException {
         try (BufferedReader br = new BufferedReader(new FileReader(path))) {
             String line;
