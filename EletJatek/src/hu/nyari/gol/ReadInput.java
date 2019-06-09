@@ -15,20 +15,25 @@ public class ReadInput implements Runnable
     {
         while(running)
         {
-            String command = user_input.nextLine();
-            switch (command) {
-                case "stop":
-                    //_startLatch.set( new CountDownLatch(1));
-                    _startLatch[0] = new CountDownLatch(1);
-                break;
-                case "start":
-                    //_startLatch.get().countDown();
-                    _startLatch[0].countDown();
-                break;
-                case "halt":
-                    break;
+            if (user_input.hasNext()){
+                synchronized (System.out)
+                {
+                    String command = user_input.nextLine();
+                    switch (command) {
+                        case "stop":
+                            //_startLatch.set( new CountDownLatch(1));
+                            _startLatch[0] = new CountDownLatch(1);
+                            break;
+                        case "start":
+                            //_startLatch.get().countDown();
+                            _startLatch[0].countDown();
+                            break;
+                        case "halt":
+                            break;
+                    }
+                    System.out.println("User command: " + command);                }
             }
-            System.out.println("User command: " + command);
+
         }
     }
 

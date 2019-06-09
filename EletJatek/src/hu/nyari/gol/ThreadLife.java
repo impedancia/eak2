@@ -2,12 +2,11 @@ package hu.nyari.gol;
 
 import net.jcip.annotations.GuardedBy;
 
+import java.io.IOException;
 import java.security.InvalidParameterException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
@@ -25,9 +24,14 @@ public class ThreadLife extends Life {
     private List<Integer[]> ranges;
     private ExecutorService executorService;
     private CountDownLatch startLatch;
+    private AtomicBoolean running;
 
+    public static Object consoleLock = new Object();
     public ThreadLife(int n, int m, boolean torus) {
+
+
         super(n, m, torus);
+        running = new AtomicBoolean(true);
     }
 
     private static int degree_of_parallelism;
@@ -77,17 +81,58 @@ public class ThreadLife extends Life {
 
             @Override
             public void run() {
-                int it = iteration_number.get();
-                System.out.println("iteration count: " + it);
+                synchronized (consoleLock) {
+                    int it = iteration_number.get();
+                    System.out.println("iteration count: " + it);
+                }
             }
         },1000,1000);
         startLatch = new CountDownLatch(0);
-        ReadInput input = new ReadInput(new CountDownLatch[]{startLatch});
+        Runnable input = new Runnable()
+        {
+            Scanner user_input = new Scanner(System.in);
+            CountDownLatch[] _startLatch;
+            List<Integer> cmd = new ArrayList<>();
+            public void run()
+            {
+                while(running.get())
+                {
+                    try {
+                        Thread.sleep(200);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    int kk=65;
+                    try {
+                        kk = System.in.read();
+                        cmd.add(kk);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    synchronized (consoleLock) {
+                                String command = user_input.nextLine();
+                                command = ((char) kk) + command;
+                                switch (command) {
+                                    case "stop":
+                                        //_startLatch.set( new CountDownLatch(1));
+                                        _startLatch[0] = new CountDownLatch(1);
+                                        break;
+                                    case "start":
+                                        //_startLatch.get().countDown();
+                                        _startLatch[0].countDown();
+                                        break;
+                                    case "halt":
+                                        break;
+                                }
+                                System.out.println("User command: " + command);
+                            }
+
+                }
+            }
+        };
         Thread console = new Thread(input);
         console.start();
-        //executorService = Executors.newCachedThreadPool();//(degree_of_parallelism);
         executorService = Executors.newFixedThreadPool(degree_of_parallelism);
-        //final CyclicBarrier barrier = new CyclicBarrier(degree_of_parallelism);
         while( count > 0 ){
             long startTime = System.currentTimeMillis();
             CountDownLatch latch = new CountDownLatch(degree_of_parallelism);
@@ -152,7 +197,12 @@ public class ThreadLife extends Life {
         timer.cancel();
         timer.purge();
         executorService.shutdown();
-        input.kill();
+        running.set(false);
+        try {
+            console.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     public static void main(String[] args ) throws Exception {
