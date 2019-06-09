@@ -52,8 +52,8 @@ public class Main {
         long startTime = System.currentTimeMillis();
 
 
-        QuickSortParallel qs = new QuickSortParallel();
-        qs.sort(array);
+        QuickSortParallel qs = new QuickSortParallel(2);
+        qs.sort_par(array);
 
         long endTime = System.currentTimeMillis();
         System.out.println("par sorting time: "+ (endTime-startTime)+" ms");

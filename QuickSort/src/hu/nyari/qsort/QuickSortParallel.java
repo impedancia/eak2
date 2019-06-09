@@ -1,62 +1,66 @@
 package hu.nyari.qsort;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.*;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class QuickSortParallel extends  QuickSort {
 
-    protected ExecutorService executorService = Executors.newFixedThreadPool(2);
+    protected ExecutorService executorService;
     protected Map<Integer, List<Future<?>>> tasks = new HashMap<Integer, List<Future<?>>>();
-    protected AtomicInteger step = new AtomicInteger(0);
+    protected CountDownLatch latch;
+    int degree_of_parallelism;
 
-    @Override
-    public void sort(long[] array) {
-        if (array == null) throw new IllegalArgumentException("Argument must not be null.");
-        step.set(0);
-        sort(array, 0, array.length - 1);
+    public QuickSortParallel(int degree_of_parallelism){
+        this.degree_of_parallelism = degree_of_parallelism;
+        this.executorService = Executors.newFixedThreadPool(degree_of_parallelism*2);
+    }
+
+    public void sort_par(long[] array){
+        //create units of work
+        //ez max kétszer annyi lesz, mint a degree of parallelism
+        List<int[]> unitsofwork = new ArrayList<>();
+
+        if (degree_of_parallelism == 0)
+            sort(array);
+        else
+            create_units_of_work(array, 0, array.length-1, degree_of_parallelism, unitsofwork);
+
+        latch = new CountDownLatch(unitsofwork.size());
+        for(int[] work : unitsofwork){
+            Runnable worker = new Runnable() {
+                @Override
+                public void run() {
+                    sort(array,work[0],work[1]);
+                    latch.countDown();
+                }
+            };
+            executorService.submit(worker);
+        }
+        try {
+            latch.await();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         executorService.shutdown();
     }
 
-    protected void sort(long[] arr, int lo, int hi) {
-        assert arr != null && 0 <= lo && hi < arr.length && -1 <= hi - lo;
-        int currstep = step.get() + 1;
-        System.out.println("step: " + currstep);
-        step.set(currstep);
-        int prevstep = currstep - 1;
-        if (lo < hi) {  // there are at least two elements to sort
-            final int pivot = split(arr, lo, hi);
-            assert lo <= pivot && pivot <= hi;
-
-
-            List<Future<?>> prevtasks = new ArrayList<>();
-            if (tasks.containsKey(prevstep))
-                prevtasks = tasks.get(prevstep);
-            for(Future<?> pt : prevtasks)
-            {
-                try {
-                    pt.wait();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-
-            List<Future<?>> currtasks = new ArrayList<>();
-
-            Thread t1 = new Thread(() -> sort(arr, lo, pivot - 1));
-            Thread t2 = new Thread(() -> sort(arr, pivot + 1, hi));
-            Future<?> task1 = executorService.submit(t1);
-            Future<?> task2 = executorService.submit(t2);
-            currtasks.add(task1);
-            currtasks.add(task2);
-            tasks.put(currstep, currtasks);
+    private void create_units_of_work(long[] array,int from, int to, int degree_of_parallelism_, List<int[]> units) {
+        if (degree_of_parallelism_ == 0) {
+            if (from != to)
+                units.add(new int[]{from, to});
         }
-
+        else {
+            int pivot = split(array, from, to);
+            // left
+            if (pivot > 0) {
+                create_units_of_work(array, from, pivot - 1, degree_of_parallelism_ - 1, units);
+            }
+            //right
+            if (pivot < array.length - 1) {
+                create_units_of_work(array, pivot + 1, to, degree_of_parallelism_ - 1, units);
+            }
+        }
     }
+
 }
