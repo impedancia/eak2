@@ -1,6 +1,9 @@
 package e9qzf1;
 
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.Queue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.*;
@@ -97,5 +100,18 @@ public class NBodyParallel extends NBody {
         }
         long endTime = System.currentTimeMillis();
         System.out.println(endTime - startTime);
+        try {
+            writeFile("c:\\temp\\bodies_par1.dat",bodies);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void writeFile(String path, Body[] array) throws IOException {
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(path))) {
+            for(Body l : array)
+                bw.write(l.toString()+"\r\n");
+        }
+
     }
 }
